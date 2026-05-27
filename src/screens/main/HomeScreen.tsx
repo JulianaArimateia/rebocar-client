@@ -1,0 +1,287 @@
+import React, { useEffect, useRef, useState } from 'react';
+import {
+  View,
+  Text,
+  TouchableOpacity,
+  StyleSheet,
+  Alert,
+  ActivityIndicator,
+} from 'react-native';
+import MapView, { Marker, PROVIDER_GOOGLE } from 'react-native-maps';
+import * as Location from 'expo-location';
+import { NativeStackNavigationProp } from '@react-navigation/native-stack';
+import { auth } from '../../config/firebase';
+import { RootStackParamList, Location as LocType } from '../../types';
+import { logoutUser } from '../../services/authService';
+
+type Props = {
+  navigation: NativeStackNavigationProp<RootStackParamList, 'Home'>;
+};
+
+export default function HomeScreen({ navigation }: Props) {
+  const mapRef = useRef<MapView>(null);
+  const [location, setLocation] = useState<LocType | null>(null);
+  const [loadingLocation, setLoadingLocation] = useState(true);
+  const [destination, setDestination] = useState('Para onde vamos levar o veículo...');
+
+  useEffect(() => {
+    (async () => {
+      const { status } = await Location.requestForegroundPermissionsAsync();
+      if (status !== 'granted') {
+        Alert.alert(
+          'Permissão negada',
+          'O ReboCar precisa da sua localização para funcionar.'
+        );
+        setLoadingLocation(false);
+        return;
+      }
+      const pos = await Location.getCurrentPositionAsync({ accuracy: Location.Accuracy.High });
+      setLocation({
+        latitude: pos.coords.latitude,
+        longitude: pos.coords.longitude,
+      });
+      setLoadingLocation(false);
+    })();
+  }, []);
+
+  const handleRequestTow = () => {
+    if (!location) {
+      Alert.alert('Localização indisponível', 'Aguarde enquanto obtemos sua localização.');
+      return;
+    }
+    navigation.navigate('ReportIncident');
+  };
+
+  const handleLogout = async () => {
+    await logoutUser();
+    navigation.replace('Login');
+  };
+
+  return (
+    <View style={styles.container}>
+      {loadingLocation ? (
+        <View style={styles.loadingContainer}>
+          <ActivityIndicator size="large" color="#F5C518" />
+          <Text style={styles.loadingText}>Obtendo sua localização...</Text>
+        </View>
+      ) : (
+        <MapView
+          ref={mapRef}
+          style={styles.map}
+          provider={PROVIDER_GOOGLE}
+          showsUserLocation
+          showsMyLocationButton
+          initialRegion={
+            location
+              ? {
+                  latitude: location.latitude,
+                  longitude: location.longitude,
+                  latitudeDelta: 0.01,
+                  longitudeDelta: 0.01,
+                }
+              : {
+                  latitude: -5.795,
+                  longitude: -35.209,
+                  latitudeDelta: 0.05,
+                  longitudeDelta: 0.05,
+                }
+          }
+        >
+          {location && (
+            <Marker
+              coordinate={location}
+              title="Você está aqui"
+              pinColor="#F5C518"
+            />
+          )}
+        </MapView>
+      )}
+
+      {/* Top bar */}
+      <View style={styles.topBar}>
+        <TouchableOpacity style={styles.menuBtn} onPress={() => {}}>
+          <Text style={styles.menuIcon}>☰</Text>
+        </TouchableOpacity>
+        <Text style={styles.appName}>ReboCar</Text>
+        <TouchableOpacity style={styles.profileBtn} onPress={handleLogout}>
+          <Text style={styles.profileIcon}>👤</Text>
+        </TouchableOpacity>
+      </View>
+
+      {/* Bottom panel */}
+      <View style={styles.bottomPanel}>
+        <View style={styles.locationRow}>
+          <View style={styles.locationDot} />
+          <Text style={styles.locationText} numberOfLines={1}>
+            {location ? 'Minha localização atual' : 'Aguardando localização...'}
+          </Text>
+        </View>
+
+        <View style={styles.destinationRow}>
+          <View style={styles.destinationDot} />
+          <Text style={styles.destinationText} numberOfLines={1}>
+            {destination}
+          </Text>
+        </View>
+
+        <TouchableOpacity
+          style={[styles.requestBtn, !location && styles.requestBtnDisabled]}
+          onPress={handleRequestTow}
+          disabled={!location}
+        >
+          <Text style={styles.requestBtnIcon}>🚛</Text>
+          <Text style={styles.requestBtnText}>Solicitar Guincho</Text>
+        </TouchableOpacity>
+
+        <Text style={styles.etaText}>Estimativa de chegada: 12 - 18 min</Text>
+
+        <View style={styles.tabBar}>
+          <TouchableOpacity style={styles.tabItem}>
+            <Text style={styles.tabIconActive}>🗺</Text>
+            <Text style={styles.tabLabelActive}>MAP</Text>
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={styles.tabItem}
+            onPress={() => navigation.navigate('History')}
+          >
+            <Text style={styles.tabIcon}>📋</Text>
+            <Text style={styles.tabLabel}>HISTORY</Text>
+          </TouchableOpacity>
+          <TouchableOpacity style={styles.tabItem}>
+            <Text style={styles.tabIcon}>🔔</Text>
+            <Text style={styles.tabLabel}>REQUESTS</Text>
+          </TouchableOpacity>
+          <TouchableOpacity style={styles.tabItem} onPress={handleLogout}>
+            <Text style={styles.tabIcon}>👤</Text>
+            <Text style={styles.tabLabel}>SUPPORT</Text>
+          </TouchableOpacity>
+        </View>
+      </View>
+    </View>
+  );
+}
+
+const styles = StyleSheet.create({
+  container: { flex: 1, backgroundColor: '#fff' },
+  map: { flex: 1 },
+  loadingContainer: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#f5f5f5',
+  },
+  loadingText: { marginTop: 16, fontSize: 16, color: '#666' },
+  topBar: {
+    position: 'absolute',
+    top: 50,
+    left: 0,
+    right: 0,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: 20,
+  },
+  menuBtn: {
+    width: 42,
+    height: 42,
+    borderRadius: 21,
+    backgroundColor: '#fff',
+    alignItems: 'center',
+    justifyContent: 'center',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.15,
+    shadowRadius: 4,
+    elevation: 4,
+  },
+  menuIcon: { fontSize: 18 },
+  appName: {
+    fontSize: 18,
+    fontWeight: '800',
+    color: '#1A1A2E',
+    backgroundColor: 'transparent',
+  },
+  profileBtn: {
+    width: 42,
+    height: 42,
+    borderRadius: 21,
+    backgroundColor: '#fff',
+    alignItems: 'center',
+    justifyContent: 'center',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.15,
+    shadowRadius: 4,
+    elevation: 4,
+  },
+  profileIcon: { fontSize: 18 },
+  bottomPanel: {
+    backgroundColor: '#fff',
+    borderTopLeftRadius: 24,
+    borderTopRightRadius: 24,
+    paddingHorizontal: 20,
+    paddingTop: 20,
+    paddingBottom: 8,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: -3 },
+    shadowOpacity: 0.1,
+    shadowRadius: 6,
+    elevation: 10,
+  },
+  locationRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 12,
+    borderBottomWidth: 1,
+    borderBottomColor: '#f0f0f0',
+    marginBottom: 4,
+  },
+  locationDot: {
+    width: 12,
+    height: 12,
+    borderRadius: 6,
+    backgroundColor: '#F5C518',
+    marginRight: 12,
+  },
+  locationText: { flex: 1, fontSize: 14, color: '#333', fontWeight: '500' },
+  destinationRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 12,
+    marginBottom: 16,
+  },
+  destinationDot: {
+    width: 12,
+    height: 12,
+    borderRadius: 3,
+    backgroundColor: '#1A1A2E',
+    marginRight: 12,
+  },
+  destinationText: { flex: 1, fontSize: 14, color: '#999' },
+  requestBtn: {
+    backgroundColor: '#F5C518',
+    borderRadius: 12,
+    paddingVertical: 16,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 10,
+    marginBottom: 8,
+  },
+  requestBtnDisabled: { opacity: 0.5 },
+  requestBtnIcon: { fontSize: 20 },
+  requestBtnText: { fontSize: 16, fontWeight: '800', color: '#1A1A2E' },
+  etaText: { textAlign: 'center', fontSize: 12, color: '#888', marginBottom: 16 },
+  tabBar: {
+    flexDirection: 'row',
+    justifyContent: 'space-around',
+    paddingTop: 8,
+    borderTopWidth: 1,
+    borderTopColor: '#f0f0f0',
+  },
+  tabItem: { alignItems: 'center', paddingVertical: 4 },
+  tabIcon: { fontSize: 20, opacity: 0.4 },
+  tabIconActive: { fontSize: 20 },
+  tabLabel: { fontSize: 10, color: '#aaa', marginTop: 2 },
+  tabLabelActive: { fontSize: 10, color: '#F5C518', fontWeight: '700', marginTop: 2 },
+});

@@ -1,0 +1,64 @@
+{
+  "expo": {
+    "name": "ReboCar",
+    "slug": "rebocar-client",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "icon": "./assets/icon.png",
+    "userInterfaceStyle": "light",
+    "splash": {
+      "image": "./assets/splash.png",
+      "resizeMode": "contain",
+      "backgroundColor": "#F5C518"
+    },
+    "ios": {
+      "supportsTablet": false,
+      "bundleIdentifier": "com.rebocar.client",
+      "infoPlist": {
+        "NSLocationWhenInUseUsageDescription": "ReboCar precisa da sua localização para encontrar guincheiros próximos.",
+        "NSLocationAlwaysAndWhenInUseUsageDescription": "ReboCar precisa da sua localização para rastrear o atendimento.",
+        "NSCameraUsageDescription": "ReboCar precisa da câmera para fotografar o veículo com defeito.",
+        "NSPhotoLibraryUsageDescription": "ReboCar precisa acessar a galeria para selecionar fotos do veículo."
+      }
+    },
+    "android": {
+      "adaptiveIcon": {
+        "foregroundImage": "./assets/adaptive-icon.png",
+        "backgroundColor": "#F5C518"
+      },
+      "package": "com.rebocar.client",
+      "permissions": [
+        "ACCESS_FINE_LOCATION",
+        "ACCESS_COARSE_LOCATION",
+        "ACCESS_BACKGROUND_LOCATION",
+        "CAMERA",
+        "READ_EXTERNAL_STORAGE",
+        "WRITE_EXTERNAL_STORAGE"
+      ]
+    },
+    "web": {
+      "favicon": "./assets/favicon.png"
+    },
+    "plugins": [
+      [
+        "expo-location",
+        {
+          "locationAlwaysAndWhenInUsePermission": "ReboCar precisa da sua localização."
+        }
+      ],
+      [
+        "expo-camera",
+        {
+          "cameraPermission": "ReboCar precisa da câmera para fotografar o veículo."
+        }
+      ],
+      [
+        "expo-notifications",
+        {
+          "icon": "./assets/icon.png",
+          "color": "#F5C518"
+        }
+      ]
+    ]
+  }
+}
