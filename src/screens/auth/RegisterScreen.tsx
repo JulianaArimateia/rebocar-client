@@ -11,6 +11,7 @@ import {
   ActivityIndicator,
   ScrollView,
 } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { RootStackParamList } from '../../types';
 import { registerClient } from '../../services/authService';
@@ -59,7 +60,8 @@ export default function RegisterScreen({ navigation }: Props) {
     >
       <ScrollView contentContainerStyle={styles.inner} showsVerticalScrollIndicator={false}>
         <TouchableOpacity style={styles.backBtn} onPress={() => navigation.goBack()}>
-          <Text style={styles.backText}>← ReboCar</Text>
+          <Ionicons name="arrow-back" size={20} color="#1A1A2E" />
+          <Text style={styles.backText}>ReboCar</Text>
         </TouchableOpacity>
 
         <Text style={styles.title}>Crie sua conta</Text>
@@ -67,7 +69,7 @@ export default function RegisterScreen({ navigation }: Props) {
 
         <Text style={styles.label}>NOME COMPLETO</Text>
         <View style={styles.inputRow}>
-          <Text style={styles.inputIcon}>👤</Text>
+          <Ionicons name="person-outline" size={18} color="#aaa" style={styles.inputIcon} />
           <TextInput
             style={styles.inputField}
             placeholder="Ex: João Silva"
@@ -79,7 +81,7 @@ export default function RegisterScreen({ navigation }: Props) {
 
         <Text style={styles.label}>E-MAIL</Text>
         <View style={styles.inputRow}>
-          <Text style={styles.inputIcon}>✉️</Text>
+          <Ionicons name="mail-outline" size={18} color="#aaa" style={styles.inputIcon} />
           <TextInput
             style={styles.inputField}
             placeholder="nome@exemplo.com"
@@ -93,7 +95,7 @@ export default function RegisterScreen({ navigation }: Props) {
 
         <Text style={styles.label}>TELEFONE CELULAR</Text>
         <View style={styles.inputRow}>
-          <Text style={styles.inputIcon}>📱</Text>
+          <Ionicons name="phone-portrait-outline" size={18} color="#aaa" style={styles.inputIcon} />
           <TextInput
             style={styles.inputField}
             placeholder="(11) 99999-9999"
@@ -106,7 +108,7 @@ export default function RegisterScreen({ navigation }: Props) {
 
         <Text style={styles.label}>SENHA</Text>
         <View style={styles.inputRow}>
-          <Text style={styles.inputIcon}>🔒</Text>
+          <Ionicons name="lock-closed-outline" size={18} color="#aaa" style={styles.inputIcon} />
           <TextInput
             style={styles.inputField}
             placeholder="••••••••"
@@ -115,8 +117,12 @@ export default function RegisterScreen({ navigation }: Props) {
             onChangeText={setPassword}
             secureTextEntry={!showPassword}
           />
-          <TouchableOpacity onPress={() => setShowPassword(!showPassword)}>
-            <Text style={styles.inputIcon}>{showPassword ? '🙈' : '👁'}</Text>
+          <TouchableOpacity onPress={() => setShowPassword(!showPassword)} style={styles.eyeBtn}>
+            <Ionicons
+              name={showPassword ? 'eye-off-outline' : 'eye-outline'}
+              size={20}
+              color="#aaa"
+            />
           </TouchableOpacity>
         </View>
 
@@ -125,7 +131,7 @@ export default function RegisterScreen({ navigation }: Props) {
           onPress={() => setAccepted(!accepted)}
         >
           <View style={[styles.checkbox, accepted && styles.checkboxChecked]}>
-            {accepted && <Text style={styles.checkmark}>✓</Text>}
+            {accepted && <Ionicons name="checkmark" size={13} color="#fff" />}
           </View>
           <Text style={styles.termsText}>
             Eu li e aceito os{' '}
@@ -142,24 +148,9 @@ export default function RegisterScreen({ navigation }: Props) {
           {loading ? (
             <ActivityIndicator color="#000" />
           ) : (
-            <Text style={styles.registerBtnText}>Criar Conta →</Text>
+            <Text style={styles.registerBtnText}>Criar Conta</Text>
           )}
         </TouchableOpacity>
-
-        <View style={styles.divider}>
-          <View style={styles.dividerLine} />
-          <Text style={styles.dividerText}>OU CADASTRE-SE COM</Text>
-          <View style={styles.dividerLine} />
-        </View>
-
-        <View style={styles.socialRow}>
-          <TouchableOpacity style={styles.socialBtn}>
-            <Text style={styles.socialBtnText}>G  Google</Text>
-          </TouchableOpacity>
-          <TouchableOpacity style={styles.socialBtn}>
-            <Text style={styles.socialBtnText}>f  Facebook</Text>
-          </TouchableOpacity>
-        </View>
 
         <TouchableOpacity onPress={() => navigation.navigate('Login')}>
           <Text style={styles.loginLink}>
@@ -174,7 +165,7 @@ export default function RegisterScreen({ navigation }: Props) {
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: '#fff' },
   inner: { paddingHorizontal: 28, paddingTop: 50, paddingBottom: 40 },
-  backBtn: { marginBottom: 24 },
+  backBtn: { flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 24 },
   backText: { fontSize: 16, fontWeight: '700', color: '#1A1A2E' },
   title: { fontSize: 26, fontWeight: '800', color: '#1A1A2E', marginBottom: 6 },
   subtitle: { fontSize: 14, color: '#666', marginBottom: 28 },
@@ -195,8 +186,9 @@ const styles = StyleSheet.create({
     backgroundColor: '#FAFAFA',
     marginBottom: 16,
   },
-  inputIcon: { fontSize: 16, marginRight: 8 },
+  inputIcon: { marginRight: 10 },
   inputField: { flex: 1, paddingVertical: 14, fontSize: 15, color: '#1A1A2E' },
+  eyeBtn: { padding: 4 },
   checkRow: { flexDirection: 'row', alignItems: 'flex-start', marginBottom: 24, gap: 10 },
   checkbox: {
     width: 20,
@@ -209,7 +201,6 @@ const styles = StyleSheet.create({
     marginTop: 1,
   },
   checkboxChecked: { backgroundColor: '#F5C518', borderColor: '#F5C518' },
-  checkmark: { color: '#fff', fontSize: 12, fontWeight: '800' },
   termsText: { flex: 1, fontSize: 13, color: '#666', lineHeight: 20 },
   termsLink: { color: '#F5C518', fontWeight: '700' },
   registerBtn: {
@@ -221,19 +212,6 @@ const styles = StyleSheet.create({
   },
   btnDisabled: { opacity: 0.7 },
   registerBtnText: { fontSize: 16, fontWeight: '800', color: '#1A1A2E' },
-  divider: { flexDirection: 'row', alignItems: 'center', marginBottom: 16 },
-  dividerLine: { flex: 1, height: 1, backgroundColor: '#E0E0E0' },
-  dividerText: { marginHorizontal: 12, fontSize: 11, color: '#aaa', fontWeight: '600' },
-  socialRow: { flexDirection: 'row', gap: 12, marginBottom: 24 },
-  socialBtn: {
-    flex: 1,
-    borderWidth: 1,
-    borderColor: '#E0E0E0',
-    borderRadius: 10,
-    paddingVertical: 12,
-    alignItems: 'center',
-  },
-  socialBtnText: { fontSize: 14, color: '#333', fontWeight: '600' },
   loginLink: { textAlign: 'center', fontSize: 14, color: '#666' },
   loginLinkBold: { color: '#F5C518', fontWeight: '700' },
 });

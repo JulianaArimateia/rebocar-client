@@ -1,10 +1,9 @@
 import { initializeApp } from 'firebase/app';
-import { getAuth } from 'firebase/auth';
+import { initializeAuth, Persistence } from 'firebase/auth';
 import { getFirestore } from 'firebase/firestore';
 import { getStorage } from 'firebase/storage';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
-// Cole aqui as configurações do seu projeto Firebase
-// Veja SETUP.md para instruções de como obter essas configurações
 const firebaseConfig = {
   apiKey: "AIzaSyClHUvgkKe2GNcXXqUCQNQxReAsKqQLck4",
   authDomain: "rebocar-379f9.firebaseapp.com",
@@ -15,18 +14,18 @@ const firebaseConfig = {
   appId: "1:1019154398388:web:cfadc9b4bbc4c0e93e6be1",
   measurementId: "G-KBRQNHW00K"
 };
-// const firebaseConfig = {
-//   apiKey: "COLE_AQUI_SUA_API_KEY",
-//   authDomain: "COLE_AQUI_SEU_AUTH_DOMAIN",
-//   projectId: "COLE_AQUI_SEU_PROJECT_ID",
-//   storageBucket: "COLE_AQUI_SEU_STORAGE_BUCKET",
-//   messagingSenderId: "COLE_AQUI_SEU_MESSAGING_SENDER_ID",
-//   appId: "COLE_AQUI_SEU_APP_ID",
-// };
 
 const app = initializeApp(firebaseConfig);
 
-export const auth = getAuth(app);
+// getReactNativePersistence lives in the RN-specific bundle resolved by Metro at runtime
+// eslint-disable-next-line @typescript-eslint/no-var-requires
+const { getReactNativePersistence } = require('@firebase/auth/dist/rn/index.js') as {
+  getReactNativePersistence: (storage: typeof AsyncStorage) => Persistence;
+};
+
+export const auth = initializeAuth(app, {
+  persistence: getReactNativePersistence(AsyncStorage),
+});
 export const db = getFirestore(app);
 export const storage = getStorage(app);
 

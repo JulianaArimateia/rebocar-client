@@ -7,6 +7,7 @@ import {
   Alert,
   ActivityIndicator,
 } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
 import MapView, { Marker, PROVIDER_GOOGLE } from 'react-native-maps';
 import * as Location from 'expo-location';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
@@ -22,7 +23,6 @@ export default function HomeScreen({ navigation }: Props) {
   const mapRef = useRef<MapView>(null);
   const [location, setLocation] = useState<LocType | null>(null);
   const [loadingLocation, setLoadingLocation] = useState(true);
-  const [destination, setDestination] = useState('Para onde vamos levar o veículo...');
 
   useEffect(() => {
     (async () => {
@@ -88,23 +88,19 @@ export default function HomeScreen({ navigation }: Props) {
           }
         >
           {location && (
-            <Marker
-              coordinate={location}
-              title="Você está aqui"
-              pinColor="#F5C518"
-            />
+            <Marker coordinate={location} title="Você está aqui" pinColor="#F5C518" />
           )}
         </MapView>
       )}
 
       {/* Top bar */}
       <View style={styles.topBar}>
-        <TouchableOpacity style={styles.menuBtn} onPress={() => {}}>
-          <Text style={styles.menuIcon}>☰</Text>
+        <TouchableOpacity style={styles.iconBtn}>
+          <Ionicons name="menu" size={22} color="#1A1A2E" />
         </TouchableOpacity>
         <Text style={styles.appName}>ReboCar</Text>
-        <TouchableOpacity style={styles.profileBtn} onPress={handleLogout}>
-          <Text style={styles.profileIcon}>👤</Text>
+        <TouchableOpacity style={styles.iconBtn} onPress={handleLogout}>
+          <Ionicons name="person-circle-outline" size={22} color="#1A1A2E" />
         </TouchableOpacity>
       </View>
 
@@ -120,7 +116,7 @@ export default function HomeScreen({ navigation }: Props) {
         <View style={styles.destinationRow}>
           <View style={styles.destinationDot} />
           <Text style={styles.destinationText} numberOfLines={1}>
-            {destination}
+            Para onde vamos levar o veículo...
           </Text>
         </View>
 
@@ -129,7 +125,7 @@ export default function HomeScreen({ navigation }: Props) {
           onPress={handleRequestTow}
           disabled={!location}
         >
-          <Text style={styles.requestBtnIcon}>🚛</Text>
+          <Ionicons name="car-sport" size={22} color="#1A1A2E" />
           <Text style={styles.requestBtnText}>Solicitar Guincho</Text>
         </TouchableOpacity>
 
@@ -137,23 +133,23 @@ export default function HomeScreen({ navigation }: Props) {
 
         <View style={styles.tabBar}>
           <TouchableOpacity style={styles.tabItem}>
-            <Text style={styles.tabIconActive}>🗺</Text>
+            <Ionicons name="map" size={22} color="#F5C518" />
             <Text style={styles.tabLabelActive}>MAP</Text>
           </TouchableOpacity>
           <TouchableOpacity
             style={styles.tabItem}
             onPress={() => navigation.navigate('History')}
           >
-            <Text style={styles.tabIcon}>📋</Text>
+            <Ionicons name="list-outline" size={22} color="#aaa" />
             <Text style={styles.tabLabel}>HISTORY</Text>
           </TouchableOpacity>
           <TouchableOpacity style={styles.tabItem}>
-            <Text style={styles.tabIcon}>🔔</Text>
-            <Text style={styles.tabLabel}>REQUESTS</Text>
+            <Ionicons name="notifications-outline" size={22} color="#aaa" />
+            <Text style={styles.tabLabel}>ALERTS</Text>
           </TouchableOpacity>
           <TouchableOpacity style={styles.tabItem} onPress={handleLogout}>
-            <Text style={styles.tabIcon}>👤</Text>
-            <Text style={styles.tabLabel}>SUPPORT</Text>
+            <Ionicons name="log-out-outline" size={22} color="#aaa" />
+            <Text style={styles.tabLabel}>SAIR</Text>
           </TouchableOpacity>
         </View>
       </View>
@@ -181,7 +177,7 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     paddingHorizontal: 20,
   },
-  menuBtn: {
+  iconBtn: {
     width: 42,
     height: 42,
     borderRadius: 21,
@@ -194,27 +190,11 @@ const styles = StyleSheet.create({
     shadowRadius: 4,
     elevation: 4,
   },
-  menuIcon: { fontSize: 18 },
   appName: {
     fontSize: 18,
     fontWeight: '800',
     color: '#1A1A2E',
-    backgroundColor: 'transparent',
   },
-  profileBtn: {
-    width: 42,
-    height: 42,
-    borderRadius: 21,
-    backgroundColor: '#fff',
-    alignItems: 'center',
-    justifyContent: 'center',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.15,
-    shadowRadius: 4,
-    elevation: 4,
-  },
-  profileIcon: { fontSize: 18 },
   bottomPanel: {
     backgroundColor: '#fff',
     borderTopLeftRadius: 24,
@@ -269,7 +249,6 @@ const styles = StyleSheet.create({
     marginBottom: 8,
   },
   requestBtnDisabled: { opacity: 0.5 },
-  requestBtnIcon: { fontSize: 20 },
   requestBtnText: { fontSize: 16, fontWeight: '800', color: '#1A1A2E' },
   etaText: { textAlign: 'center', fontSize: 12, color: '#888', marginBottom: 16 },
   tabBar: {
@@ -280,8 +259,6 @@ const styles = StyleSheet.create({
     borderTopColor: '#f0f0f0',
   },
   tabItem: { alignItems: 'center', paddingVertical: 4 },
-  tabIcon: { fontSize: 20, opacity: 0.4 },
-  tabIconActive: { fontSize: 20 },
   tabLabel: { fontSize: 10, color: '#aaa', marginTop: 2 },
   tabLabelActive: { fontSize: 10, color: '#F5C518', fontWeight: '700', marginTop: 2 },
 });

@@ -5,12 +5,12 @@ import {
   TextInput,
   TouchableOpacity,
   StyleSheet,
-  Image,
   KeyboardAvoidingView,
   Platform,
   Alert,
   ActivityIndicator,
 } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { RootStackParamList } from '../../types';
 import { loginUser } from '../../services/authService';
@@ -49,7 +49,7 @@ export default function LoginScreen({ navigation }: Props) {
       <View style={styles.inner}>
         <View style={styles.logoContainer}>
           <View style={styles.logoBox}>
-            <Text style={styles.logoText}>🚛</Text>
+            <Ionicons name="car-sport" size={40} color="#1A1A2E" />
           </View>
           <Text style={styles.appName}>ReboCar</Text>
         </View>
@@ -57,29 +57,37 @@ export default function LoginScreen({ navigation }: Props) {
         <Text style={styles.title}>Bem-vindo de volta</Text>
         <Text style={styles.subtitle}>Sua segurança na estrada a apenas um toque de distância.</Text>
 
-        <Text style={styles.label}>E-MAIL OU TELEFONE</Text>
-        <TextInput
-          style={styles.input}
-          placeholder="exemplo@email.com"
-          placeholderTextColor="#aaa"
-          value={email}
-          onChangeText={setEmail}
-          keyboardType="email-address"
-          autoCapitalize="none"
-        />
+        <Text style={styles.label}>E-MAIL</Text>
+        <View style={styles.inputRow}>
+          <Ionicons name="mail-outline" size={18} color="#aaa" style={styles.inputIcon} />
+          <TextInput
+            style={styles.input}
+            placeholder="exemplo@email.com"
+            placeholderTextColor="#aaa"
+            value={email}
+            onChangeText={setEmail}
+            keyboardType="email-address"
+            autoCapitalize="none"
+          />
+        </View>
 
         <Text style={styles.label}>SENHA</Text>
-        <View style={styles.passwordContainer}>
+        <View style={styles.inputRow}>
+          <Ionicons name="lock-closed-outline" size={18} color="#aaa" style={styles.inputIcon} />
           <TextInput
-            style={styles.passwordInput}
+            style={styles.input}
             placeholder="••••••••"
             placeholderTextColor="#aaa"
             value={password}
             onChangeText={setPassword}
             secureTextEntry={!showPassword}
           />
-          <TouchableOpacity onPress={() => setShowPassword(!showPassword)}>
-            <Text style={styles.eyeIcon}>{showPassword ? '🙈' : '👁'}</Text>
+          <TouchableOpacity onPress={() => setShowPassword(!showPassword)} style={styles.eyeBtn}>
+            <Ionicons
+              name={showPassword ? 'eye-off-outline' : 'eye-outline'}
+              size={20}
+              color="#aaa"
+            />
           </TouchableOpacity>
         </View>
 
@@ -95,26 +103,9 @@ export default function LoginScreen({ navigation }: Props) {
           {loading ? (
             <ActivityIndicator color="#000" />
           ) : (
-            <Text style={styles.loginBtnText}>Entrar →</Text>
+            <Text style={styles.loginBtnText}>Entrar</Text>
           )}
         </TouchableOpacity>
-
-        <View style={styles.divider}>
-          <View style={styles.dividerLine} />
-          <Text style={styles.dividerText}>OU CONTINUE COM</Text>
-          <View style={styles.dividerLine} />
-        </View>
-
-        <View style={styles.socialRow}>
-          <TouchableOpacity style={styles.socialBtn}>
-            <Text style={styles.socialIcon}>G</Text>
-            <Text style={styles.socialText}>Google</Text>
-          </TouchableOpacity>
-          <TouchableOpacity style={styles.socialBtn}>
-            <Text style={styles.socialIcon}>🍎</Text>
-            <Text style={styles.socialText}>Apple</Text>
-          </TouchableOpacity>
-        </View>
 
         <TouchableOpacity onPress={() => navigation.navigate('Register')}>
           <Text style={styles.registerLink}>
@@ -139,7 +130,7 @@ const styles = StyleSheet.create({
   },
   logoContainer: {
     alignItems: 'center',
-    marginBottom: 24,
+    marginBottom: 32,
   },
   logoBox: {
     width: 80,
@@ -149,9 +140,6 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     marginBottom: 8,
-  },
-  logoText: {
-    fontSize: 40,
   },
   appName: {
     fontSize: 22,
@@ -167,7 +155,7 @@ const styles = StyleSheet.create({
   subtitle: {
     fontSize: 14,
     color: '#666',
-    marginBottom: 28,
+    marginBottom: 32,
   },
   label: {
     fontSize: 11,
@@ -176,35 +164,26 @@ const styles = StyleSheet.create({
     marginBottom: 6,
     letterSpacing: 1,
   },
-  input: {
-    borderWidth: 1,
-    borderColor: '#E0E0E0',
-    borderRadius: 10,
-    paddingHorizontal: 16,
-    paddingVertical: 14,
-    fontSize: 15,
-    color: '#1A1A2E',
-    marginBottom: 16,
-    backgroundColor: '#FAFAFA',
-  },
-  passwordContainer: {
+  inputRow: {
     flexDirection: 'row',
     alignItems: 'center',
     borderWidth: 1,
     borderColor: '#E0E0E0',
     borderRadius: 10,
-    paddingHorizontal: 16,
+    paddingHorizontal: 14,
     backgroundColor: '#FAFAFA',
-    marginBottom: 8,
+    marginBottom: 16,
   },
-  passwordInput: {
+  inputIcon: {
+    marginRight: 10,
+  },
+  input: {
     flex: 1,
     paddingVertical: 14,
     fontSize: 15,
     color: '#1A1A2E',
   },
-  eyeIcon: {
-    fontSize: 18,
+  eyeBtn: {
     padding: 4,
   },
   forgotBtn: {
@@ -221,7 +200,7 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     paddingVertical: 16,
     alignItems: 'center',
-    marginBottom: 24,
+    marginBottom: 32,
   },
   loginBtnDisabled: {
     opacity: 0.7,
@@ -230,47 +209,6 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: '800',
     color: '#1A1A2E',
-  },
-  divider: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: 16,
-  },
-  dividerLine: {
-    flex: 1,
-    height: 1,
-    backgroundColor: '#E0E0E0',
-  },
-  dividerText: {
-    marginHorizontal: 12,
-    fontSize: 11,
-    color: '#aaa',
-    fontWeight: '600',
-  },
-  socialRow: {
-    flexDirection: 'row',
-    gap: 12,
-    marginBottom: 24,
-  },
-  socialBtn: {
-    flex: 1,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    borderWidth: 1,
-    borderColor: '#E0E0E0',
-    borderRadius: 10,
-    paddingVertical: 12,
-    gap: 8,
-  },
-  socialIcon: {
-    fontSize: 16,
-    fontWeight: '800',
-  },
-  socialText: {
-    fontSize: 14,
-    color: '#333',
-    fontWeight: '600',
   },
   registerLink: {
     textAlign: 'center',
