@@ -5,6 +5,7 @@ import {
   TouchableOpacity,
   StyleSheet,
   Alert,
+  Linking,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import MapView, { Marker, Polyline, PROVIDER_GOOGLE } from 'react-native-maps';
@@ -33,20 +34,33 @@ export default function TrackingScreen({ navigation, route }: Props) {
   const [request, setRequest] = useState<ServiceRequest | null>(null);
   const [driverLocation, setDriverLocation] = useState<LocType | null>(null);
   const [driverName, setDriverName] = useState('Guincheiro');
+  const [driverPhone, setDriverPhone] = useState('');
   const [driverRating, setDriverRating] = useState(0);
+
+  const openCall = (phone: string) => {
+    const clean = phone.replace(/\D/g, '');
+    Linking.openURL(`tel:+55${clean}`);
+  };
+
+  const openWhatsApp = (phone: string, name: string) => {
+    const clean = phone.replace(/\D/g, '');
+    const msg = encodeURIComponent(`Olá ${name}, estou usando o app ReboCar e gostaria de falar sobre minha solicitação de guincho.`);
+    Linking.openURL(`https://wa.me/55${clean}?text=${msg}`).catch(() => {
+      Linking.openURL(`sms:+55${clean}`);
+    });
+  };
 
   useEffect(() => {
     const unsubReq = subscribeToRequest(requestId, async (req) => {
       setRequest(req);
 
       if (req.driverId && driverName === 'Guincheiro') {
-        const driverSnap = await getDoc(doc(db, 'users', req.driverId));
-        if (driverSnap.exists()) {
-          setDriverName(driverSnap.data().name || 'Guincheiro');
-        }
         const driverDataSnap = await getDoc(doc(db, 'drivers', req.driverId));
         if (driverDataSnap.exists()) {
-          setDriverRating(driverDataSnap.data().rating || 0);
+          const d = driverDataSnap.data();
+          setDriverName(d.name || 'Guincheiro');
+          setDriverRating(d.rating || 0);
+          setDriverPhone(d.phone || '');
         }
       }
 
@@ -148,11 +162,17 @@ export default function TrackingScreen({ navigation, route }: Props) {
             <Text style={styles.driverRating}>{'★'.repeat(Math.round(driverRating))} {driverRating.toFixed(1)}</Text>
           </View>
           <View style={styles.driverActions}>
-            <TouchableOpacity style={styles.actionBtn} onPress={() => Alert.alert('Chat', 'Funcionalidade em breve.')}>
-              <Ionicons name="chatbubble-ellipses-outline" size={18} color="#666" />
+            <TouchableOpacity
+              style={styles.actionBtn}
+              onPress={() => driverPhone ? openWhatsApp(driverPhone, driverName) : Alert.alert('Telefone indisponível', 'O número do motorista não está disponível.')}
+            >
+              <Ionicons name="logo-whatsapp" size={18} color="#25D366" />
             </TouchableOpacity>
-            <TouchableOpacity style={styles.actionBtn} onPress={() => Alert.alert('Ligar', 'Funcionalidade em breve.')}>
-              <Ionicons name="call-outline" size={18} color="#666" />
+            <TouchableOpacity
+              style={styles.actionBtn}
+              onPress={() => driverPhone ? openCall(driverPhone) : Alert.alert('Telefone indisponível', 'O número do motorista não está disponível.')}
+            >
+              <Ionicons name="call-outline" size={18} color="#2980B9" />
             </TouchableOpacity>
           </View>
         </View>

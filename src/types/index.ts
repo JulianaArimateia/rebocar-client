@@ -99,6 +99,8 @@ export type RootStackParamList = {
   Login: undefined;
   Register: undefined;
   Home: undefined;
+  Profile: undefined;
+  Alerts: undefined;
   ReportIncident: undefined;
   Waiting: { requestId: string };
   Tracking: { requestId: string };
