@@ -96,13 +96,15 @@ export const subscribeToDriverLocation = (
 };
 
 export const getClientHistory = async (clientId: string): Promise<ServiceRequest[]> => {
-  const q = query(
-    collection(db, 'requests'),
-    where('clientId', '==', clientId),
-    orderBy('createdAt', 'desc')
-  );
+  const q = query(collection(db, 'requests'), where('clientId', '==', clientId));
   const snap = await getDocs(q);
-  return snap.docs.map((d) => ({ id: d.id, ...d.data() } as ServiceRequest));
+  return snap.docs
+    .map((d) => ({ id: d.id, ...d.data() } as ServiceRequest))
+    .sort((a, b) => {
+      const aMs = a.createdAt?.toMillis?.() ?? a.createdAt?.seconds * 1000 ?? 0;
+      const bMs = b.createdAt?.toMillis?.() ?? b.createdAt?.seconds * 1000 ?? 0;
+      return bMs - aMs;
+    });
 };
 
 export const submitEvaluation = async (

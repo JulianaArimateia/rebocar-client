@@ -7,247 +7,222 @@ import {
   ScrollView,
   Alert,
   ActivityIndicator,
-  Clipboard,
+  Linking,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { RouteProp } from '@react-navigation/native';
-import { getDoc, doc } from 'firebase/firestore';
-import { db } from '../../config/firebase';
+import { getFunctions, httpsCallable } from 'firebase/functions';
+import { doc, onSnapshot } from 'firebase/firestore';
+import app, { db } from '../../config/firebase';
 import { RootStackParamList, TOW_SERVICE_LABELS } from '../../types';
-import { subscribeToPayment, confirmPaymentByClient } from '../../services/requestService';
-import { auth } from '../../config/firebase';
 
 type Props = {
   navigation: NativeStackNavigationProp<RootStackParamList, 'Payment'>;
   route: RouteProp<RootStackParamList, 'Payment'>;
 };
 
-const PIX_TYPE_LABELS: Record<string, string> = {
-  phone: 'Telefone',
-  email: 'E-mail',
-  cpf: 'CPF',
-  random: 'Chave Aleatória',
-  cnpj: 'CNPJ',
-};
+const COMMISSION = 0.15;
+const fbFunctions = getFunctions(app, 'southamerica-east1');
+const criarPagamento = httpsCallable(fbFunctions, 'criarPagamento');
 
 export default function PaymentScreen({ navigation, route }: Props) {
   const { requestId, driverId, driverName, serviceType, amount } = route.params;
-  const [pixKey, setPixKey] = useState<string | null>(null);
-  const [pixKeyType, setPixKeyType] = useState<string>('phone');
-  const [payment, setPayment] = useState<any | null>(null);
-  const [confirming, setConfirming] = useState(false);
-  const [copied, setCopied] = useState(false);
+  const [loading, setLoading] = useState(true);
+  const [paying, setPaying] = useState(false);
+  const [paymentId, setPaymentId] = useState<string | null>(null);
+  const [checkoutUrl, setCheckoutUrl] = useState<string | null>(null);
+  const [paymentStatus, setPaymentStatus] = useState<string>('pending');
+  const [error, setError] = useState<string | null>(null);
 
-  useEffect(() => {
-    getDoc(doc(db, 'drivers', driverId)).then((snap) => {
-      if (snap.exists()) {
-        setPixKey(snap.data().pixKey || null);
-        setPixKeyType(snap.data().pixKeyType || 'phone');
-      }
-    });
-  }, [driverId]);
+  const platformFee = parseFloat((amount * COMMISSION).toFixed(2));
+  const driverNet = parseFloat((amount - platformFee).toFixed(2));
 
+  // Cria a preferência de pagamento ao abrir a tela
   useEffect(() => {
-    const unsub = subscribeToPayment(requestId, (p) => {
-      setPayment(p);
-      if (p?.status === 'driver_confirmed') {
-        navigation.replace('Rating', {
+    (async () => {
+      try {
+        const result = await criarPagamento({
           requestId,
           driverId,
+          amount,
+          serviceType: TOW_SERVICE_LABELS[serviceType],
           driverName,
-          serviceType,
-        });
+        }) as { data: { paymentId: string; checkoutUrl: string; sandboxUrl: string; status: string } };
+
+        setPaymentId(result.data.paymentId);
+        setCheckoutUrl(result.data.checkoutUrl);
+        setPaymentStatus(result.data.status);
+      } catch (e: any) {
+        setError(e.message || 'Não foi possível iniciar o pagamento.');
+      } finally {
+        setLoading(false);
+      }
+    })();
+  }, []);
+
+  // Monitora o status do pagamento em tempo real
+  useEffect(() => {
+    if (!paymentId) return;
+    const unsub = onSnapshot(doc(db, 'payments', paymentId), (snap) => {
+      if (snap.exists()) {
+        const status = snap.data().status;
+        setPaymentStatus(status);
+        if (status === 'approved') {
+          navigation.replace('Rating', { requestId, driverId, driverName, serviceType });
+        }
       }
     });
     return unsub;
-  }, [requestId]);
+  }, [paymentId]);
 
-  const handleCopyKey = () => {
-    if (!pixKey) return;
-    Clipboard.setString(pixKey);
-    setCopied(true);
-    setTimeout(() => setCopied(false), 3000);
-  };
-
-  const handleConfirmPayment = () => {
-    if (!payment) {
-      Alert.alert('Aguarde', 'O registro de pagamento ainda está sendo criado. Tente novamente em instantes.');
-      return;
+  const handlePay = async () => {
+    if (!checkoutUrl) return;
+    setPaying(true);
+    try {
+      const canOpen = await Linking.canOpenURL(checkoutUrl);
+      if (canOpen) {
+        await Linking.openURL(checkoutUrl);
+      } else {
+        Alert.alert('Erro', 'Não foi possível abrir o pagamento. Tente novamente.');
+      }
+    } catch {
+      Alert.alert('Erro', 'Não foi possível abrir o pagamento.');
+    } finally {
+      setPaying(false);
     }
-    Alert.alert(
-      'Confirmar Pagamento',
-      `Você confirma que realizou o pagamento de R$ ${amount.toFixed(2)} via PIX para ${driverName}?`,
-      [
-        { text: 'Ainda não', style: 'cancel' },
-        {
-          text: 'Sim, paguei',
-          onPress: async () => {
-            setConfirming(true);
-            try {
-              await confirmPaymentByClient(payment.id);
-              Alert.alert(
-                'Pagamento confirmado',
-                'Obrigado! O motorista foi notificado. Você poderá avaliar o serviço em breve.',
-                [{ text: 'OK' }]
-              );
-            } catch (e: any) {
-              Alert.alert('Erro', 'Não foi possível registrar a confirmação. Tente novamente.');
-            } finally {
-              setConfirming(false);
-            }
-          },
-        },
-      ]
-    );
   };
 
-  const handleDispute = () => {
-    Alert.alert(
-      'Registrar Problema',
-      'Se houve algum problema com o pagamento ou serviço, entre em contato com nosso suporte.',
-      [
-        { text: 'Cancelar', style: 'cancel' },
-        {
-          text: 'Contatar Suporte',
-          onPress: () => Alert.alert('Suporte', 'suporte@rebocar.com.br\n(XX) XXXX-XXXX'),
-        },
-      ]
-    );
+  const handleSupport = () => {
+    Alert.alert('Suporte ReboCar', 'Problemas com o pagamento?\n\nE-mail: suporte@rebocar.com.br\nWhatsApp: (XX) XXXX-XXXX');
   };
 
-  const isPaid = payment?.status === 'client_confirmed' || payment?.status === 'driver_confirmed';
+  if (loading) {
+    return (
+      <View style={styles.loadingContainer}>
+        <ActivityIndicator size="large" color="#F5C518" />
+        <Text style={styles.loadingText}>Preparando pagamento seguro...</Text>
+      </View>
+    );
+  }
+
+  if (error) {
+    return (
+      <View style={styles.errorContainer}>
+        <Ionicons name="alert-circle-outline" size={52} color="#FF4444" />
+        <Text style={styles.errorTitle}>Erro ao iniciar pagamento</Text>
+        <Text style={styles.errorText}>{error}</Text>
+        <TouchableOpacity style={styles.retryBtn} onPress={() => navigation.goBack()}>
+          <Text style={styles.retryBtnText}>Tentar novamente</Text>
+        </TouchableOpacity>
+      </View>
+    );
+  }
+
+  const isPaid = paymentStatus === 'approved';
 
   return (
     <View style={styles.container}>
       <View style={styles.header}>
         <View style={{ width: 38 }} />
-        <Text style={styles.headerTitle}>Pagamento</Text>
+        <Text style={styles.headerTitle}>Pagamento Seguro</Text>
         <View style={{ width: 38 }} />
       </View>
 
       <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
 
-        {/* Success Banner */}
+        {/* Serviço concluído */}
         <View style={styles.successBanner}>
-          <View style={styles.successIcon}>
-            <Ionicons name="checkmark-circle" size={40} color="#27AE60" />
+          <Ionicons name="checkmark-circle" size={44} color="#27AE60" />
+          <View style={{ flex: 1 }}>
+            <Text style={styles.successTitle}>Serviço Concluído!</Text>
+            <Text style={styles.successSub}>{driverName} • {TOW_SERVICE_LABELS[serviceType]}</Text>
           </View>
-          <Text style={styles.successTitle}>Serviço Concluído!</Text>
-          <Text style={styles.successSubtitle}>
-            {driverName} finalizou o atendimento com sucesso.
-          </Text>
         </View>
 
-        {/* Amount Card */}
+        {/* Detalhes do valor */}
         <View style={styles.amountCard}>
-          <Text style={styles.amountLabel}>VALOR DO SERVIÇO</Text>
-          <Text style={styles.amountValue}>R$ {amount.toFixed(2)}</Text>
-          <View style={styles.serviceTypePill}>
-            <Ionicons name="car-sport" size={12} color="#F5C518" />
-            <Text style={styles.serviceTypeText}>{TOW_SERVICE_LABELS[serviceType]}</Text>
+          <View style={styles.amountRow}>
+            <Text style={styles.amountLabel}>Valor do serviço</Text>
+            <Text style={styles.amountValue}>R$ {amount.toFixed(2)}</Text>
+          </View>
+          <View style={[styles.amountRow, styles.totalRow]}>
+            <Text style={styles.totalLabel}>TOTAL A PAGAR</Text>
+            <Text style={styles.totalValue}>R$ {amount.toFixed(2)}</Text>
+          </View>
+          <View style={styles.securedRow}>
+            <Ionicons name="shield-checkmark-outline" size={14} color="#27AE60" />
+            <Text style={styles.securedText}>Pagamento processado com segurança pelo Mercado Pago</Text>
           </View>
         </View>
 
-        {/* PIX Card */}
-        <View style={styles.pixCard}>
-          <View style={styles.pixHeader}>
-            <View style={styles.pixLogo}>
-              <Text style={styles.pixLogoText}>PIX</Text>
-            </View>
-            <Text style={styles.pixTitle}>Pague via PIX</Text>
-          </View>
-
-          <Text style={styles.pixInstructions}>
-            Copie a chave PIX abaixo e realize o pagamento pelo aplicativo do seu banco.
-          </Text>
-
-          {pixKey ? (
-            <>
-              <Text style={styles.pixKeyTypeLabel}>
-                {PIX_TYPE_LABELS[pixKeyType] || pixKeyType}
-              </Text>
-              <TouchableOpacity style={styles.pixKeyBox} onPress={handleCopyKey}>
-                <Text style={styles.pixKeyText} numberOfLines={1}>{pixKey}</Text>
-                <View style={[styles.copyBtn, copied && styles.copyBtnActive]}>
-                  <Ionicons
-                    name={copied ? 'checkmark' : 'copy-outline'}
-                    size={16}
-                    color={copied ? '#fff' : '#F5C518'}
-                  />
-                  <Text style={[styles.copyBtnText, copied && styles.copyBtnTextActive]}>
-                    {copied ? 'Copiado!' : 'Copiar'}
-                  </Text>
-                </View>
-              </TouchableOpacity>
-            </>
-          ) : (
-            <View style={styles.pixKeyLoading}>
-              <ActivityIndicator size="small" color="#F5C518" />
-              <Text style={styles.pixKeyLoadingText}>Carregando chave PIX...</Text>
-            </View>
-          )}
-
-          <View style={styles.pixSteps}>
-            <Text style={styles.pixStepsTitle}>Como pagar:</Text>
-            {[
-              'Abra o app do seu banco',
-              'Acesse Pix > Pagar',
-              'Cole a chave copiada',
-              'Confirme o valor e pague',
-              'Volte aqui e confirme o pagamento',
-            ].map((step, i) => (
-              <View key={i} style={styles.pixStep}>
-                <View style={styles.pixStepNum}>
-                  <Text style={styles.pixStepNumText}>{i + 1}</Text>
-                </View>
-                <Text style={styles.pixStepText}>{step}</Text>
+        {/* Métodos de pagamento */}
+        <View style={styles.methodsCard}>
+          <Text style={styles.methodsTitle}>FORMAS DE PAGAMENTO ACEITAS</Text>
+          <View style={styles.methodsRow}>
+            <View style={styles.methodBadge}>
+              <View style={styles.pixBadge}>
+                <Text style={styles.pixText}>PIX</Text>
               </View>
-            ))}
+              <Text style={styles.methodLabel}>PIX</Text>
+            </View>
+            <View style={styles.methodBadge}>
+              <Ionicons name="card-outline" size={22} color="#1A1A2E" />
+              <Text style={styles.methodLabel}>Débito</Text>
+            </View>
+            <View style={styles.methodBadge}>
+              <Ionicons name="card" size={22} color="#1A1A2E" />
+              <Text style={styles.methodLabel}>Crédito</Text>
+            </View>
           </View>
+          <Text style={styles.installmentsNote}>Crédito em até 12x • Sem juros em 1x</Text>
         </View>
 
-        {/* LGPD/Security note */}
-        <View style={styles.securityNote}>
-          <Ionicons name="shield-checkmark-outline" size={16} color="#27AE60" />
-          <Text style={styles.securityNoteText}>
-            O pagamento é realizado diretamente entre você e o motorista via PIX (Banco Central do Brasil). A ReboCar não armazena dados bancários.
-          </Text>
-        </View>
+        {/* Status do pagamento */}
+        {isPaid && (
+          <View style={styles.paidBanner}>
+            <Ionicons name="checkmark-circle" size={24} color="#27AE60" />
+            <Text style={styles.paidText}>Pagamento confirmado! Redirecionando para avaliação...</Text>
+          </View>
+        )}
 
-        {/* Action Buttons */}
-        {!isPaid ? (
+        {/* Botão pagar */}
+        {!isPaid && (
           <>
             <TouchableOpacity
-              style={[styles.confirmBtn, (!pixKey || confirming) && styles.confirmBtnDisabled]}
-              onPress={handleConfirmPayment}
-              disabled={!pixKey || confirming}
+              style={[styles.payBtn, (!checkoutUrl || paying) && styles.payBtnDisabled]}
+              onPress={handlePay}
+              disabled={!checkoutUrl || paying}
             >
-              {confirming ? (
+              {paying ? (
                 <ActivityIndicator color="#1A1A2E" />
               ) : (
                 <>
-                  <Ionicons name="checkmark-circle-outline" size={20} color="#1A1A2E" />
-                  <Text style={styles.confirmBtnText}>Já realizei o pagamento</Text>
+                  <Ionicons name="lock-closed" size={18} color="#1A1A2E" />
+                  <Text style={styles.payBtnText}>Pagar R$ {amount.toFixed(2)}</Text>
+                  <Ionicons name="open-outline" size={16} color="#1A1A2E" />
                 </>
               )}
             </TouchableOpacity>
 
-            <TouchableOpacity style={styles.disputeBtn} onPress={handleDispute}>
-              <Ionicons name="alert-circle-outline" size={18} color="#FF4444" />
-              <Text style={styles.disputeBtnText}>Reportar Problema</Text>
+            <Text style={styles.redirectNote}>
+              Você será redirecionado ao Mercado Pago para concluir o pagamento. Após pagar, o status atualiza automaticamente.
+            </Text>
+
+            <TouchableOpacity style={styles.supportBtn} onPress={handleSupport}>
+              <Ionicons name="chatbubble-ellipses-outline" size={16} color="#666" />
+              <Text style={styles.supportBtnText}>Problemas com o pagamento?</Text>
             </TouchableOpacity>
           </>
-        ) : (
-          <View style={styles.paidBanner}>
-            <Ionicons name="checkmark-circle" size={24} color="#27AE60" />
-            <Text style={styles.paidBannerText}>
-              {payment?.status === 'driver_confirmed'
-                ? 'Pagamento confirmado pelo motorista!'
-                : 'Aguardando confirmação do motorista...'}
-            </Text>
-          </View>
         )}
+
+        {/* Segurança / LGPD */}
+        <View style={styles.securityCard}>
+          <Ionicons name="shield-checkmark-outline" size={18} color="#27AE60" />
+          <Text style={styles.securityText}>
+            Seus dados financeiros são processados exclusivamente pelo Mercado Pago (PCI-DSS). A ReboCar não armazena dados de cartão.
+          </Text>
+        </View>
       </ScrollView>
     </View>
   );
@@ -255,6 +230,13 @@ export default function PaymentScreen({ navigation, route }: Props) {
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: '#F7F8FA' },
+  loadingContainer: { flex: 1, alignItems: 'center', justifyContent: 'center', backgroundColor: '#F7F8FA', gap: 16 },
+  loadingText: { fontSize: 15, color: '#666' },
+  errorContainer: { flex: 1, alignItems: 'center', justifyContent: 'center', padding: 32, gap: 14 },
+  errorTitle: { fontSize: 18, fontWeight: '800', color: '#1A1A2E' },
+  errorText: { fontSize: 14, color: '#666', textAlign: 'center' },
+  retryBtn: { backgroundColor: '#F5C518', borderRadius: 12, paddingVertical: 14, paddingHorizontal: 32 },
+  retryBtnText: { fontSize: 15, fontWeight: '800', color: '#1A1A2E' },
   header: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -269,148 +251,109 @@ const styles = StyleSheet.create({
   headerTitle: { fontSize: 17, fontWeight: '800', color: '#1A1A2E' },
   content: { padding: 20, paddingBottom: 48 },
   successBanner: {
-    backgroundColor: '#fff',
-    borderRadius: 16,
-    padding: 24,
-    alignItems: 'center',
-    marginBottom: 16,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.06,
-    shadowRadius: 4,
-    elevation: 2,
-  },
-  successIcon: { marginBottom: 12 },
-  successTitle: { fontSize: 20, fontWeight: '800', color: '#1A1A2E', marginBottom: 6 },
-  successSubtitle: { fontSize: 14, color: '#666', textAlign: 'center' },
-  amountCard: {
-    backgroundColor: '#1A1A2E',
-    borderRadius: 16,
-    padding: 20,
-    alignItems: 'center',
-    marginBottom: 16,
-  },
-  amountLabel: { fontSize: 11, color: '#888', fontWeight: '700', letterSpacing: 1, marginBottom: 8 },
-  amountValue: { fontSize: 36, fontWeight: '800', color: '#F5C518', marginBottom: 10 },
-  serviceTypePill: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 5,
-    backgroundColor: 'rgba(245,197,24,0.15)',
-    borderRadius: 8,
-    paddingHorizontal: 10,
-    paddingVertical: 4,
-  },
-  serviceTypeText: { fontSize: 11, color: '#F5C518', fontWeight: '700' },
-  pixCard: {
-    backgroundColor: '#fff',
-    borderRadius: 16,
-    padding: 20,
-    marginBottom: 12,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.06,
-    shadowRadius: 4,
-    elevation: 2,
-  },
-  pixHeader: { flexDirection: 'row', alignItems: 'center', gap: 12, marginBottom: 12 },
-  pixLogo: {
-    backgroundColor: '#32BCAD',
-    borderRadius: 8,
-    paddingHorizontal: 10,
-    paddingVertical: 5,
-  },
-  pixLogoText: { fontSize: 13, fontWeight: '800', color: '#fff', letterSpacing: 1 },
-  pixTitle: { fontSize: 16, fontWeight: '800', color: '#1A1A2E' },
-  pixInstructions: { fontSize: 13, color: '#666', lineHeight: 20, marginBottom: 16 },
-  pixKeyTypeLabel: { fontSize: 10, fontWeight: '700', color: '#888', letterSpacing: 1, marginBottom: 8 },
-  pixKeyBox: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#F7F8FA',
-    borderRadius: 10,
-    borderWidth: 1.5,
-    borderColor: '#E0E0E0',
-    paddingHorizontal: 14,
-    paddingVertical: 12,
-    marginBottom: 20,
-    gap: 10,
-  },
-  pixKeyText: { flex: 1, fontSize: 14, color: '#1A1A2E', fontWeight: '600' },
-  copyBtn: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 4,
-    paddingHorizontal: 10,
-    paddingVertical: 6,
-    borderRadius: 8,
-    borderWidth: 1,
-    borderColor: '#F5C518',
-  },
-  copyBtnActive: { backgroundColor: '#27AE60', borderColor: '#27AE60' },
-  copyBtnText: { fontSize: 12, color: '#F5C518', fontWeight: '700' },
-  copyBtnTextActive: { color: '#fff' },
-  pixKeyLoading: { flexDirection: 'row', alignItems: 'center', gap: 10, marginBottom: 20 },
-  pixKeyLoadingText: { fontSize: 13, color: '#888' },
-  pixSteps: { borderTopWidth: 1, borderTopColor: '#F0F0F0', paddingTop: 16 },
-  pixStepsTitle: { fontSize: 12, fontWeight: '700', color: '#888', letterSpacing: 1, marginBottom: 12 },
-  pixStep: { flexDirection: 'row', alignItems: 'center', gap: 12, marginBottom: 10 },
-  pixStepNum: {
-    width: 22,
-    height: 22,
-    borderRadius: 11,
-    backgroundColor: '#F5C518',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  pixStepNumText: { fontSize: 11, fontWeight: '800', color: '#1A1A2E' },
-  pixStepText: { flex: 1, fontSize: 13, color: '#555' },
-  securityNote: {
-    flexDirection: 'row',
-    alignItems: 'flex-start',
-    gap: 8,
+    gap: 14,
     backgroundColor: '#E8F8F0',
-    borderRadius: 10,
-    paddingHorizontal: 14,
-    paddingVertical: 12,
-    marginBottom: 20,
+    borderRadius: 16,
+    padding: 18,
+    marginBottom: 16,
     borderWidth: 1,
     borderColor: '#C3E8D0',
   },
-  securityNoteText: { flex: 1, fontSize: 12, color: '#27AE60', lineHeight: 18 },
-  confirmBtn: {
-    backgroundColor: '#F5C518',
-    borderRadius: 14,
-    paddingVertical: 16,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 10,
+  successTitle: { fontSize: 17, fontWeight: '800', color: '#1A1A2E', marginBottom: 2 },
+  successSub: { fontSize: 13, color: '#555' },
+  amountCard: {
+    backgroundColor: '#fff',
+    borderRadius: 16,
+    padding: 20,
+    marginBottom: 16,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.06,
+    shadowRadius: 4,
+    elevation: 2,
+  },
+  amountRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 },
+  amountLabel: { fontSize: 14, color: '#666' },
+  amountValue: { fontSize: 14, fontWeight: '600', color: '#1A1A2E' },
+  totalRow: {
+    borderTopWidth: 1,
+    borderTopColor: '#F0F0F0',
+    paddingTop: 12,
+    marginTop: 4,
     marginBottom: 12,
   },
-  confirmBtnDisabled: { opacity: 0.6 },
-  confirmBtnText: { fontSize: 15, fontWeight: '800', color: '#1A1A2E' },
-  disputeBtn: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 6,
-    paddingVertical: 14,
-    borderRadius: 14,
-    borderWidth: 1,
-    borderColor: '#FF4444',
+  totalLabel: { fontSize: 12, fontWeight: '800', color: '#888', letterSpacing: 1 },
+  totalValue: { fontSize: 24, fontWeight: '800', color: '#1A1A2E' },
+  securedRow: { flexDirection: 'row', alignItems: 'center', gap: 6 },
+  securedText: { flex: 1, fontSize: 11, color: '#27AE60' },
+  methodsCard: {
+    backgroundColor: '#fff',
+    borderRadius: 16,
+    padding: 20,
+    marginBottom: 16,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.06,
+    shadowRadius: 4,
+    elevation: 2,
   },
-  disputeBtnText: { fontSize: 14, color: '#FF4444', fontWeight: '600' },
+  methodsTitle: { fontSize: 11, fontWeight: '700', color: '#888', letterSpacing: 1, marginBottom: 16 },
+  methodsRow: { flexDirection: 'row', gap: 16, marginBottom: 10 },
+  methodBadge: { alignItems: 'center', gap: 6 },
+  pixBadge: { backgroundColor: '#32BCAD', borderRadius: 8, paddingHorizontal: 8, paddingVertical: 5 },
+  pixText: { fontSize: 12, fontWeight: '800', color: '#fff' },
+  methodLabel: { fontSize: 11, color: '#666', fontWeight: '600' },
+  installmentsNote: { fontSize: 11, color: '#aaa' },
   paidBanner: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 10,
     backgroundColor: '#E8F8F0',
     borderRadius: 14,
-    paddingVertical: 16,
-    paddingHorizontal: 20,
+    padding: 16,
+    marginBottom: 16,
     borderWidth: 1,
     borderColor: '#C3E8D0',
   },
-  paidBannerText: { flex: 1, fontSize: 14, color: '#27AE60', fontWeight: '700' },
+  paidText: { flex: 1, fontSize: 14, fontWeight: '700', color: '#27AE60' },
+  payBtn: {
+    backgroundColor: '#F5C518',
+    borderRadius: 14,
+    paddingVertical: 18,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 10,
+    marginBottom: 12,
+    shadowColor: '#F5C518',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.4,
+    shadowRadius: 8,
+    elevation: 4,
+  },
+  payBtnDisabled: { opacity: 0.6, shadowOpacity: 0 },
+  payBtnText: { fontSize: 17, fontWeight: '800', color: '#1A1A2E' },
+  redirectNote: { fontSize: 12, color: '#888', textAlign: 'center', lineHeight: 18, marginBottom: 16 },
+  supportBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 6,
+    paddingVertical: 12,
+    marginBottom: 16,
+  },
+  supportBtnText: { fontSize: 13, color: '#666' },
+  securityCard: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: 10,
+    backgroundColor: '#E8F8F0',
+    borderRadius: 12,
+    padding: 14,
+    borderWidth: 1,
+    borderColor: '#C3E8D0',
+  },
+  securityText: { flex: 1, fontSize: 12, color: '#27AE60', lineHeight: 18 },
 });
