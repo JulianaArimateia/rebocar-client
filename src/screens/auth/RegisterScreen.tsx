@@ -45,7 +45,11 @@ export default function RegisterScreen({ navigation }: Props) {
     setLoading(true);
     try {
       await registerClient(name.trim(), email.trim(), phone.trim(), password);
-      navigation.replace('Home');
+      Alert.alert(
+        'Conta criada!',
+        'Bem-vindo ao ReboCar. Sua conta de cliente foi criada com sucesso.',
+        [{ text: 'Continuar', onPress: () => navigation.replace('Home') }]
+      );
     } catch (e: any) {
       Alert.alert('Erro no cadastro', e.message || 'Tente novamente.');
     } finally {
@@ -66,6 +70,13 @@ export default function RegisterScreen({ navigation }: Props) {
 
         <Text style={styles.title}>Crie sua conta</Text>
         <Text style={styles.subtitle}>Pronto para a estrada com a segurança da ReboCar.</Text>
+
+        <View style={styles.dualAccountNote}>
+          <Ionicons name="information-circle-outline" size={16} color="#2980B9" />
+          <Text style={styles.dualAccountText}>
+            Motorista parceiro? Use o mesmo e-mail e senha da sua conta de motorista para criar sua conta de cliente.
+          </Text>
+        </View>
 
         <Text style={styles.label}>NOME COMPLETO</Text>
         <View style={styles.inputRow}>
@@ -226,6 +237,19 @@ const styles = StyleSheet.create({
   registerBtnText: { fontSize: 16, fontWeight: '800', color: '#1A1A2E' },
   loginLink: { textAlign: 'center', fontSize: 14, color: '#666' },
   loginLinkBold: { color: '#F5C518', fontWeight: '700' },
+  dualAccountNote: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: 8,
+    backgroundColor: '#EBF5FB',
+    borderRadius: 10,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    marginBottom: 20,
+    borderWidth: 1,
+    borderColor: '#AED6F1',
+  },
+  dualAccountText: { flex: 1, fontSize: 12, color: '#2980B9', lineHeight: 18 },
   termsLinksRow: {
     flexDirection: 'row',
     alignItems: 'center',
