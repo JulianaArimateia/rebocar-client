@@ -8,8 +8,9 @@ import {
   ActivityIndicator,
   RefreshControl,
 } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
-import { RootStackParamList, ServiceRequest } from '../../types';
+import { RootStackParamList, ServiceRequest, TOW_SERVICE_LABELS } from '../../types';
 import { getClientHistory } from '../../services/requestService';
 import { auth } from '../../config/firebase';
 
@@ -66,11 +67,16 @@ export default function HistoryScreen({ navigation }: Props) {
       <View style={styles.card}>
         <View style={styles.cardHeader}>
           <View style={styles.vehicleIcon}>
-            <Text style={styles.vehicleEmoji}>🚗</Text>
+            <Ionicons name="car-outline" size={22} color="#888" />
           </View>
           <View style={styles.cardInfo}>
             <Text style={styles.vehicleName}>{item.vehicleModel}</Text>
             <Text style={styles.vehiclePlate}>{item.vehiclePlate}</Text>
+            {item.serviceType && (
+              <Text style={styles.serviceTypeLabel}>
+                {TOW_SERVICE_LABELS[item.serviceType]}
+              </Text>
+            )}
           </View>
           <View style={[styles.statusBadge, { backgroundColor: cfg.bg }]}>
             <Text style={[styles.statusText, { color: cfg.color }]}>{cfg.label}</Text>
@@ -84,7 +90,7 @@ export default function HistoryScreen({ navigation }: Props) {
 
         {item.destinationAddress && item.destinationAddress !== 'Não informado' && (
           <View style={styles.destinationRow}>
-            <Text style={styles.destinationIcon}>📍</Text>
+            <Ionicons name="location-outline" size={14} color="#888" />
             <Text style={styles.destinationText} numberOfLines={1}>{item.destinationAddress}</Text>
           </View>
         )}
@@ -117,7 +123,7 @@ export default function HistoryScreen({ navigation }: Props) {
           }
           ListEmptyComponent={
             <View style={styles.emptyContainer}>
-              <Text style={styles.emptyEmoji}>📋</Text>
+              <Ionicons name="document-text-outline" size={52} color="#CCC" style={{ marginBottom: 16 }} />
               <Text style={styles.emptyTitle}>Nenhuma solicitação</Text>
               <Text style={styles.emptySubtitle}>Seu histórico de serviços aparecerá aqui.</Text>
             </View>
@@ -166,10 +172,10 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     marginRight: 12,
   },
-  vehicleEmoji: { fontSize: 22 },
   cardInfo: { flex: 1 },
   vehicleName: { fontSize: 15, fontWeight: '700', color: '#1A1A2E' },
   vehiclePlate: { fontSize: 12, color: '#888', marginTop: 2 },
+  serviceTypeLabel: { fontSize: 11, color: '#F5A623', fontWeight: '600', marginTop: 3 },
   statusBadge: {
     borderRadius: 8,
     paddingHorizontal: 10,
@@ -180,13 +186,11 @@ const styles = StyleSheet.create({
   problemText: { fontSize: 13, color: '#666', lineHeight: 18, marginBottom: 8 },
   dateText: { fontSize: 11, color: '#aaa', marginBottom: 6 },
   destinationRow: { flexDirection: 'row', alignItems: 'center', gap: 6 },
-  destinationIcon: { fontSize: 12 },
   destinationText: { flex: 1, fontSize: 12, color: '#888' },
   emptyContainer: {
     alignItems: 'center',
     paddingTop: 80,
   },
-  emptyEmoji: { fontSize: 52, marginBottom: 16 },
   emptyTitle: { fontSize: 18, fontWeight: '700', color: '#1A1A2E', marginBottom: 8 },
   emptySubtitle: { fontSize: 14, color: '#888', textAlign: 'center' },
 });

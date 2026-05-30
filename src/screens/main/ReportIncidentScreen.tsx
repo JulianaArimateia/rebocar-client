@@ -10,18 +10,26 @@ import {
   Alert,
   ActivityIndicator,
 } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
 import * as ImagePicker from 'expo-image-picker';
 import * as Location from 'expo-location';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { auth } from '../../config/firebase';
-import { RootStackParamList } from '../../types';
+import { RootStackParamList, TowServiceType, TOW_SERVICE_LABELS, TOW_SERVICE_PRICES } from '../../types';
 import { createRequest } from '../../services/requestService';
 
 type Props = {
   navigation: NativeStackNavigationProp<RootStackParamList, 'ReportIncident'>;
 };
 
+const SERVICE_OPTIONS: { type: TowServiceType; label: string; sub: string; price: number; icon: keyof typeof Ionicons.glyphMap }[] = [
+  { type: 'car', label: 'Guincho para Carro', sub: 'Sedan, SUV, pickup leve', price: TOW_SERVICE_PRICES.car, icon: 'car-outline' },
+  { type: 'truck', label: 'Guincho para Caminhão', sub: 'Caminhões e veículos pesados', price: TOW_SERVICE_PRICES.truck, icon: 'bus-outline' },
+  { type: 'munck', label: 'Caminhão Munck', sub: 'Içamento com guindaste', price: TOW_SERVICE_PRICES.munck, icon: 'construct-outline' },
+];
+
 export default function ReportIncidentScreen({ navigation }: Props) {
+  const [serviceType, setServiceType] = useState<TowServiceType | null>(null);
   const [vehicleModel, setVehicleModel] = useState('');
   const [vehiclePlate, setVehiclePlate] = useState('');
   const [problemDescription, setProblemDescription] = useState('');
@@ -67,6 +75,10 @@ export default function ReportIncidentScreen({ navigation }: Props) {
   };
 
   const handleConfirm = async () => {
+    if (!serviceType) {
+      Alert.alert('Tipo de serviço', 'Selecione o tipo de guincho necessário.');
+      return;
+    }
     if (!vehicleModel.trim() || !vehiclePlate.trim() || !problemDescription.trim()) {
       Alert.alert('Campos obrigatórios', 'Preencha modelo, placa e descrição do problema.');
       return;
@@ -83,6 +95,7 @@ export default function ReportIncidentScreen({ navigation }: Props) {
       const requestId = await createRequest(
         uid,
         displayName,
+        serviceType,
         vehicleModel.trim(),
         vehiclePlate.trim().toUpperCase(),
         problemDescription.trim(),
@@ -110,10 +123,40 @@ export default function ReportIncidentScreen({ navigation }: Props) {
       </View>
 
       <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
-        <Text style={styles.sectionTitle}>Report Incident</Text>
+        <Text style={styles.sectionTitle}>Solicitar Guincho</Text>
         <Text style={styles.sectionSubtitle}>
-          Informe os dados do veículo e fotos para solicitar assistência imediata.
+          Escolha o tipo de serviço e informe os dados do veículo.
         </Text>
+
+        <Text style={styles.serviceLabel}>TIPO DE SERVIÇO</Text>
+        {SERVICE_OPTIONS.map((opt) => {
+          const selected = serviceType === opt.type;
+          return (
+            <TouchableOpacity
+              key={opt.type}
+              style={[styles.serviceCard, selected && styles.serviceCardSelected]}
+              onPress={() => setServiceType(opt.type)}
+            >
+              <View style={[styles.serviceIconBox, selected && styles.serviceIconBoxSelected]}>
+                <Ionicons name={opt.icon} size={24} color={selected ? '#1A1A2E' : '#888'} />
+              </View>
+              <View style={styles.serviceInfo}>
+                <Text style={[styles.serviceCardLabel, selected && styles.serviceCardLabelSelected]}>
+                  {opt.label}
+                </Text>
+                <Text style={styles.serviceCardSub}>{opt.sub}</Text>
+              </View>
+              <View style={styles.servicePriceBox}>
+                <Text style={[styles.servicePrice, selected && styles.servicePriceSelected]}>
+                  R$ {opt.price},00
+                </Text>
+                <View style={[styles.serviceRadio, selected && styles.serviceRadioSelected]}>
+                  {selected && <View style={styles.serviceRadioDot} />}
+                </View>
+              </View>
+            </TouchableOpacity>
+          );
+        })}
 
         <View style={styles.card}>
           <Text style={styles.cardTitle}>| Informações do Veículo</Text>
@@ -181,7 +224,7 @@ export default function ReportIncidentScreen({ navigation }: Props) {
 
             {photos.length < 4 && (
               <TouchableOpacity style={styles.addPhotoBtn} onPress={pickPhoto}>
-                <Text style={styles.cameraIcon}>📷</Text>
+                <Ionicons name="camera-outline" size={24} color="#aaa" />
                 <Text style={styles.addPhotoText}>
                   {photos.length === 0 ? 'FRONT VIEW' : 'ADD OTHERS'}
                 </Text>
@@ -227,6 +270,62 @@ const styles = StyleSheet.create({
   content: { padding: 16, paddingBottom: 40 },
   sectionTitle: { fontSize: 22, fontWeight: '800', color: '#1A1A2E', marginBottom: 4 },
   sectionSubtitle: { fontSize: 13, color: '#888', marginBottom: 20, lineHeight: 18 },
+  serviceLabel: {
+    fontSize: 11,
+    fontWeight: '700',
+    color: '#888',
+    letterSpacing: 1,
+    marginBottom: 10,
+  },
+  serviceCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#fff',
+    borderRadius: 14,
+    padding: 14,
+    marginBottom: 10,
+    borderWidth: 1.5,
+    borderColor: '#E8E8E8',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.04,
+    shadowRadius: 3,
+    elevation: 1,
+    gap: 12,
+  },
+  serviceCardSelected: { borderColor: '#F5C518', backgroundColor: '#FFFBEA' },
+  serviceIconBox: {
+    width: 48,
+    height: 48,
+    borderRadius: 12,
+    backgroundColor: '#F7F8FA',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  serviceIconBoxSelected: { backgroundColor: '#F5C518' },
+  serviceInfo: { flex: 1 },
+  serviceCardLabel: { fontSize: 14, fontWeight: '700', color: '#888', marginBottom: 2 },
+  serviceCardLabelSelected: { color: '#1A1A2E' },
+  serviceCardSub: { fontSize: 11, color: '#aaa' },
+  servicePriceBox: { alignItems: 'flex-end', gap: 6 },
+  servicePrice: { fontSize: 13, fontWeight: '700', color: '#aaa' },
+  servicePriceSelected: { color: '#1A1A2E' },
+  serviceRadio: {
+    width: 20,
+    height: 20,
+    borderRadius: 10,
+    borderWidth: 2,
+    borderColor: '#DDD',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  serviceRadioSelected: { borderColor: '#F5C518' },
+  serviceRadioDot: {
+    width: 10,
+    height: 10,
+    borderRadius: 5,
+    backgroundColor: '#F5C518',
+  },
   card: {
     backgroundColor: '#fff',
     borderRadius: 16,
@@ -298,7 +397,6 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     gap: 4,
   },
-  cameraIcon: { fontSize: 24 },
   addPhotoText: { fontSize: 9, color: '#aaa', fontWeight: '600' },
   confirmBtn: {
     backgroundColor: '#1A1A2E',

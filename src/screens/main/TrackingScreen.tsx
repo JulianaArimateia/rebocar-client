@@ -6,10 +6,11 @@ import {
   StyleSheet,
   Alert,
 } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
 import MapView, { Marker, Polyline, PROVIDER_GOOGLE } from 'react-native-maps';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { RouteProp } from '@react-navigation/native';
-import { RootStackParamList, ServiceRequest, Location as LocType } from '../../types';
+import { RootStackParamList, ServiceRequest, Location as LocType, TOW_SERVICE_PRICES } from '../../types';
 import { subscribeToRequest, subscribeToDriverLocation, cancelRequest } from '../../services/requestService';
 import { doc, getDoc } from 'firebase/firestore';
 import { db } from '../../config/firebase';
@@ -50,10 +51,13 @@ export default function TrackingScreen({ navigation, route }: Props) {
       }
 
       if (req.status === 'completed') {
-        navigation.replace('Rating', {
+        const amount = req.estimatedPrice ?? TOW_SERVICE_PRICES[req.serviceType] ?? 145;
+        navigation.replace('Payment', {
           requestId,
           driverId: req.driverId!,
           driverName,
+          serviceType: req.serviceType,
+          amount,
         });
       }
     });
@@ -120,7 +124,7 @@ export default function TrackingScreen({ navigation, route }: Props) {
         {driverLocation && (
           <Marker coordinate={driverLocation} title="Guincheiro">
             <View style={styles.driverMarker}>
-              <Text style={styles.driverMarkerEmoji}>🚛</Text>
+              <Ionicons name="car-sport" size={22} color="#1A1A2E" />
             </View>
           </Marker>
         )}
@@ -137,25 +141,25 @@ export default function TrackingScreen({ navigation, route }: Props) {
       <View style={styles.driverCard}>
         <View style={styles.driverRow}>
           <View style={styles.driverAvatar}>
-            <Text style={styles.driverAvatarEmoji}>👷</Text>
+            <Ionicons name="person" size={28} color="#1A1A2E" />
           </View>
           <View style={styles.driverInfo}>
             <Text style={styles.driverName}>{driverName}</Text>
             <Text style={styles.driverRating}>{'★'.repeat(Math.round(driverRating))} {driverRating.toFixed(1)}</Text>
           </View>
           <View style={styles.driverActions}>
-            <TouchableOpacity style={styles.actionBtn}>
-              <Text>💬</Text>
+            <TouchableOpacity style={styles.actionBtn} onPress={() => Alert.alert('Chat', 'Funcionalidade em breve.')}>
+              <Ionicons name="chatbubble-ellipses-outline" size={18} color="#666" />
             </TouchableOpacity>
-            <TouchableOpacity style={styles.actionBtn}>
-              <Text>📞</Text>
+            <TouchableOpacity style={styles.actionBtn} onPress={() => Alert.alert('Ligar', 'Funcionalidade em breve.')}>
+              <Ionicons name="call-outline" size={18} color="#666" />
             </TouchableOpacity>
           </View>
         </View>
 
         <View style={styles.etaRow}>
           <View style={styles.etaBox}>
-            <Text style={styles.etaIcon}>⏱</Text>
+            <Ionicons name="time-outline" size={18} color="#F5C518" />
             <Text style={styles.etaLabel}>ETA</Text>
             <Text style={styles.etaValue}>~15 min</Text>
           </View>
@@ -218,7 +222,6 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     marginRight: 12,
   },
-  driverAvatarEmoji: { fontSize: 28 },
   driverInfo: { flex: 1 },
   driverName: { fontSize: 16, fontWeight: '800', color: '#1A1A2E' },
   driverRating: { fontSize: 13, color: '#F5C518', marginTop: 2 },
@@ -241,7 +244,6 @@ const styles = StyleSheet.create({
     paddingVertical: 10,
     gap: 8,
   },
-  etaIcon: { fontSize: 18 },
   etaLabel: { fontSize: 12, color: '#888', fontWeight: '600' },
   etaValue: { fontSize: 14, fontWeight: '800', color: '#1A1A2E', marginLeft: 'auto' },
   timeline: {

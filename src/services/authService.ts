@@ -2,10 +2,24 @@ import {
   createUserWithEmailAndPassword,
   signInWithEmailAndPassword,
   signOut,
+  sendPasswordResetEmail,
 } from 'firebase/auth';
-import { doc, setDoc, getDoc, serverTimestamp } from 'firebase/firestore';
+import { doc, setDoc, getDoc, addDoc, collection, serverTimestamp } from 'firebase/firestore';
 import { auth, db } from '../config/firebase';
 import { User } from '../types';
+
+export const forgotPassword = async (email: string): Promise<void> => {
+  await sendPasswordResetEmail(auth, email.trim());
+};
+
+export const requestDataDeletion = async (uid: string, reason?: string): Promise<void> => {
+  await addDoc(collection(db, 'deletionRequests'), {
+    userId: uid,
+    reason: reason || 'Solicitação do usuário',
+    status: 'pending',
+    createdAt: serverTimestamp(),
+  });
+};
 
 export const registerClient = async (
   name: string,
@@ -20,6 +34,7 @@ export const registerClient = async (
     email,
     phone,
     type: 'client',
+    termsAcceptedAt: serverTimestamp(),
     createdAt: serverTimestamp(),
   };
   await setDoc(doc(db, 'users', credential.user.uid), user);

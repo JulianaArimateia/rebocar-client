@@ -126,6 +126,16 @@ export default function RegisterScreen({ navigation }: Props) {
           </TouchableOpacity>
         </View>
 
+        <View style={styles.termsLinksRow}>
+          <TouchableOpacity onPress={() => navigation.navigate('Legal', { type: 'terms' })}>
+            <Text style={styles.termsLinkBtn}>Ler Termos de Uso</Text>
+          </TouchableOpacity>
+          <Text style={styles.termsDot}> · </Text>
+          <TouchableOpacity onPress={() => navigation.navigate('Legal', { type: 'privacy' })}>
+            <Text style={styles.termsLinkBtn}>Política de Privacidade</Text>
+          </TouchableOpacity>
+        </View>
+
         <TouchableOpacity
           style={styles.checkRow}
           onPress={() => setAccepted(!accepted)}
@@ -134,9 +144,11 @@ export default function RegisterScreen({ navigation }: Props) {
             {accepted && <Ionicons name="checkmark" size={13} color="#fff" />}
           </View>
           <Text style={styles.termsText}>
-            Eu li e aceito os{' '}
-            <Text style={styles.termsLink}>Termos de Serviço</Text> e a{' '}
-            <Text style={styles.termsLink}>Política de Privacidade</Text>.
+            Li e aceito os Termos de Uso e a Política de Privacidade da ReboCar.
+            {'\n'}
+            <Text style={styles.lgpdNote}>
+              Meus dados serão tratados conforme a LGPD (Lei 13.709/2018).
+            </Text>
           </Text>
         </TouchableOpacity>
 
@@ -214,4 +226,12 @@ const styles = StyleSheet.create({
   registerBtnText: { fontSize: 16, fontWeight: '800', color: '#1A1A2E' },
   loginLink: { textAlign: 'center', fontSize: 14, color: '#666' },
   loginLinkBold: { color: '#F5C518', fontWeight: '700' },
+  termsLinksRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 12,
+  },
+  termsLinkBtn: { fontSize: 13, color: '#F5C518', fontWeight: '700', textDecorationLine: 'underline' },
+  termsDot: { fontSize: 13, color: '#aaa' },
+  lgpdNote: { fontSize: 11, color: '#aaa', fontStyle: 'italic' },
 });

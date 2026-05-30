@@ -15,8 +15,10 @@ import HomeScreen from './src/screens/main/HomeScreen';
 import ReportIncidentScreen from './src/screens/main/ReportIncidentScreen';
 import WaitingScreen from './src/screens/main/WaitingScreen';
 import TrackingScreen from './src/screens/main/TrackingScreen';
+import PaymentScreen from './src/screens/main/PaymentScreen';
 import RatingScreen from './src/screens/main/RatingScreen';
 import HistoryScreen from './src/screens/main/HistoryScreen';
+import LegalScreen from './src/screens/legal/LegalScreen';
 
 const Stack = createNativeStackNavigator<RootStackParamList>();
 
@@ -51,8 +53,10 @@ export default function App() {
         <Stack.Screen name="ReportIncident" component={ReportIncidentScreen} />
         <Stack.Screen name="Waiting" component={WaitingScreen} />
         <Stack.Screen name="Tracking" component={TrackingScreen} />
+        <Stack.Screen name="Payment" component={PaymentScreen} />
         <Stack.Screen name="Rating" component={RatingScreen} />
         <Stack.Screen name="History" component={HistoryScreen} />
+        <Stack.Screen name="Legal" component={LegalScreen} />
       </Stack.Navigator>
     </NavigationContainer>
   );

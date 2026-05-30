@@ -13,7 +13,7 @@ import {
 import { Ionicons } from '@expo/vector-icons';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { RootStackParamList } from '../../types';
-import { loginUser } from '../../services/authService';
+import { loginUser, forgotPassword } from '../../services/authService';
 
 type Props = {
   navigation: NativeStackNavigationProp<RootStackParamList, 'Login'>;
@@ -91,7 +91,33 @@ export default function LoginScreen({ navigation }: Props) {
           </TouchableOpacity>
         </View>
 
-        <TouchableOpacity style={styles.forgotBtn}>
+        <TouchableOpacity
+          style={styles.forgotBtn}
+          onPress={() => {
+            if (!email.trim()) {
+              Alert.alert('Digite seu e-mail', 'Informe seu e-mail acima antes de recuperar a senha.');
+              return;
+            }
+            Alert.alert(
+              'Recuperar senha',
+              `Enviar link de redefinição para:\n${email.trim()}?`,
+              [
+                { text: 'Cancelar', style: 'cancel' },
+                {
+                  text: 'Enviar',
+                  onPress: async () => {
+                    try {
+                      await forgotPassword(email.trim());
+                      Alert.alert('E-mail enviado', 'Verifique sua caixa de entrada e siga as instruções para redefinir sua senha.');
+                    } catch (e: any) {
+                      Alert.alert('Erro', 'Não foi possível enviar o e-mail. Verifique o endereço e tente novamente.');
+                    }
+                  },
+                },
+              ]
+            );
+          }}
+        >
           <Text style={styles.forgotText}>Esqueceu a senha?</Text>
         </TouchableOpacity>
 

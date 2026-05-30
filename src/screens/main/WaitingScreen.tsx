@@ -9,6 +9,7 @@ import {
   Animated,
   Easing,
 } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
 import MapView, { Marker, PROVIDER_GOOGLE } from 'react-native-maps';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { RouteProp } from '@react-navigation/native';
@@ -106,7 +107,7 @@ export default function WaitingScreen({ navigation, route }: Props) {
       <View style={styles.topBar}>
         <Text style={styles.appName}>≡ ReboCar</Text>
         <View style={styles.profileCircle}>
-          <Text style={styles.profileIcon}>👤</Text>
+          <Ionicons name="person-outline" size={16} color="#fff" />
         </View>
       </View>
 
@@ -114,7 +115,7 @@ export default function WaitingScreen({ navigation, route }: Props) {
         <View style={styles.searchAnimation}>
           <Animated.View style={[styles.pulseOuter, { transform: [{ scale: pulseAnim }] }]} />
           <View style={styles.pulseInner}>
-            <Text style={styles.truckEmoji}>🚛</Text>
+            <Ionicons name="car-sport" size={28} color="#1A1A2E" />
           </View>
         </View>
 
@@ -124,7 +125,7 @@ export default function WaitingScreen({ navigation, route }: Props) {
         </Text>
 
         <View style={styles.securityRow}>
-          <Text style={styles.lockIcon}>🔒</Text>
+          <Ionicons name="lock-closed-outline" size={16} color="#666" />
           <Text style={styles.securityText}>Sua localização está criptografada e segura.</Text>
         </View>
 
@@ -166,7 +167,6 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  profileIcon: { fontSize: 16 },
   bottomCard: {
     backgroundColor: '#fff',
     borderTopLeftRadius: 28,
@@ -198,7 +198,6 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  truckEmoji: { fontSize: 28 },
   searchTitle: {
     fontSize: 18,
     fontWeight: '800',
@@ -224,7 +223,6 @@ const styles = StyleSheet.create({
     gap: 8,
     width: '100%',
   },
-  lockIcon: { fontSize: 16 },
   securityText: { flex: 1, fontSize: 12, color: '#666' },
   cancelBtn: {
     borderWidth: 1,

@@ -95,7 +95,7 @@ export default function HomeScreen({ navigation }: Props) {
 
       {/* Top bar */}
       <View style={styles.topBar}>
-        <TouchableOpacity style={styles.iconBtn}>
+        <TouchableOpacity style={styles.iconBtn} onPress={() => Alert.alert('Menu', 'Funcionalidade em breve.')}>
           <Ionicons name="menu" size={22} color="#1A1A2E" />
         </TouchableOpacity>
         <Text style={styles.appName}>ReboCar</Text>
@@ -143,7 +143,7 @@ export default function HomeScreen({ navigation }: Props) {
             <Ionicons name="list-outline" size={22} color="#aaa" />
             <Text style={styles.tabLabel}>HISTORY</Text>
           </TouchableOpacity>
-          <TouchableOpacity style={styles.tabItem}>
+          <TouchableOpacity style={styles.tabItem} onPress={() => Alert.alert('Alertas', 'Funcionalidade em breve.')}>
             <Ionicons name="notifications-outline" size={22} color="#aaa" />
             <Text style={styles.tabLabel}>ALERTS</Text>
           </TouchableOpacity>

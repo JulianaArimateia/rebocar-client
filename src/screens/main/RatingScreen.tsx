@@ -9,9 +9,10 @@ import {
   Alert,
   ActivityIndicator,
 } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { RouteProp } from '@react-navigation/native';
-import { RootStackParamList } from '../../types';
+import { RootStackParamList, TOW_SERVICE_LABELS } from '../../types';
 import { submitEvaluation } from '../../services/requestService';
 import { auth } from '../../config/firebase';
 
@@ -23,7 +24,7 @@ type Props = {
 const TAGS = ['Pontual', 'Cordial', 'Equipamento Limpo', 'Profissional', 'Rápido'];
 
 export default function RatingScreen({ navigation, route }: Props) {
-  const { requestId, driverId, driverName } = route.params;
+  const { requestId, driverId, driverName, serviceType } = route.params;
   const [rating, setRating] = useState(0);
   const [comment, setComment] = useState('');
   const [selectedTags, setSelectedTags] = useState<string[]>([]);
@@ -62,7 +63,7 @@ export default function RatingScreen({ navigation, route }: Props) {
         </TouchableOpacity>
         <Text style={styles.appName}>ReboCar</Text>
         <View style={styles.profileCircle}>
-          <Text>👤</Text>
+          <Ionicons name="person-outline" size={18} color="#888" />
         </View>
       </View>
 
@@ -72,10 +73,12 @@ export default function RatingScreen({ navigation, route }: Props) {
 
         <View style={styles.driverCard}>
           <View style={styles.driverAvatar}>
-            <Text style={styles.driverEmoji}>👷</Text>
+            <Ionicons name="person" size={36} color="#1A1A2E" />
           </View>
           <Text style={styles.driverName}>{driverName}</Text>
-          <Text style={styles.driverSubtitle}>🚛 GUINCHO PLATAFORMA</Text>
+          <Text style={styles.driverSubtitle}>
+            {serviceType ? TOW_SERVICE_LABELS[serviceType].toUpperCase() : 'GUINCHO'}
+          </Text>
 
           <Text style={styles.ratingLabel}>SUA AVALIAÇÃO</Text>
           <View style={styles.starsRow}>
@@ -169,7 +172,6 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     marginBottom: 12,
   },
-  driverEmoji: { fontSize: 36 },
   driverName: { fontSize: 18, fontWeight: '800', color: '#1A1A2E', marginBottom: 4 },
   driverSubtitle: { fontSize: 12, color: '#888', marginBottom: 16 },
   ratingLabel: {

@@ -13,7 +13,7 @@ import {
 } from 'firebase/firestore';
 import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 import { db, storage } from '../config/firebase';
-import { ServiceRequest, Location } from '../types';
+import { ServiceRequest, Location, TowServiceType, TOW_SERVICE_PRICES } from '../types';
 
 export const uploadVehiclePhoto = async (
   uri: string,
@@ -29,6 +29,7 @@ export const uploadVehiclePhoto = async (
 export const createRequest = async (
   clientId: string,
   clientName: string,
+  serviceType: TowServiceType,
   vehicleModel: string,
   vehiclePlate: string,
   problemDescription: string,
@@ -39,11 +40,13 @@ export const createRequest = async (
   const requestData: Partial<ServiceRequest> = {
     clientId,
     clientName,
+    serviceType,
     vehicleModel,
     vehiclePlate,
     problemDescription,
     clientLocation,
     destinationAddress,
+    estimatedPrice: TOW_SERVICE_PRICES[serviceType],
     status: 'waiting',
     createdAt: serverTimestamp(),
   };
@@ -130,6 +133,31 @@ export const submitEvaluation = async (
   const avg = ratings.reduce((a, b) => a + b, 0) / ratings.length;
   await updateDoc(doc(db, 'drivers', driverId), { rating: avg });
   await updateDoc(doc(db, 'requests', requestId), { evaluated: true });
+};
+
+export const subscribeToPayment = (
+  requestId: string,
+  callback: (payment: any | null) => void
+) => {
+  const q = query(
+    collection(db, 'payments'),
+    where('requestId', '==', requestId)
+  );
+  return onSnapshot(q, (snap) => {
+    if (snap.empty) {
+      callback(null);
+    } else {
+      const d = snap.docs[0];
+      callback({ id: d.id, ...d.data() });
+    }
+  });
+};
+
+export const confirmPaymentByClient = async (paymentId: string): Promise<void> => {
+  await updateDoc(doc(db, 'payments', paymentId), {
+    status: 'client_confirmed',
+    clientConfirmedAt: serverTimestamp(),
+  });
 };
 
 export const haversineDistance = (a: Location, b: Location): number => {
